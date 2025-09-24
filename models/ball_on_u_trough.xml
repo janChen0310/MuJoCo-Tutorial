@@ -1,0 +1,39 @@
+<mujoco model="u-trough-demo">
+    <option timestep="0.002" gravity="0 0 -9.81"/>
+    <visual>
+        <!-- make contact glyphs easy to see -->
+        <scale contactwidth="0.4" contactheight="0.02" forcewidth="0.05"/>
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+        <global azimuth="120" elevation="-20"/>
+    </visual>
+
+    <asset>
+        <!-- Allocate a 201x201 heightfield; we’ll fill its data in Python -->
+        <!-- size = [hx hy hmax hbase] -->
+        <hfield name="u_ground" nrow="201" ncol="201" size="2.0 2.0 0.6 0.05"/>
+        <texture name="skybox" type="skybox" builtin="gradient" rgb1="0.4 0.6 0.8" rgb2="0 0 0" width="512" height="512"/>
+        <texture name="ground_plane" type="2d" builtin="checker" rgb1="0.2 0.3 0.4" rgb2="0.1 0.15 0.2" width="512" height="512" mark="cross" markrgb="0.8 0.8 0.8"/>
+        <material name="ground_mat" texture="ground_plane" texrepeat="10 10" reflectance="0.2"/>
+    </asset>
+
+    <worldbody>
+        <!-- The terrain geom references the hfield asset -->
+        <light pos="0 0 1.5" directional="true"/>
+        <geom name="terrain" type="hfield" hfield="u_ground"
+            rgba="0.8 0.9 1.0 1"
+            condim="6"
+            material="ground_mat"
+            friction="0 0 0"/>
+
+        <!-- Ball starts off to one side so it rolls into the U -->
+        <body name="ball" pos="1 0 1">
+        <freejoint/>
+        <inertial pos="0 0 0" mass="1" diaginertia="0.004 0.004 0.004"/>
+        <geom type="sphere" size="0.12" rgba="0.9 0.2 0.2 1"
+            density="1500"
+            condim="6"
+            friction="0 0 0"/>
+        </body>
+    </worldbody>
+</mujoco>
