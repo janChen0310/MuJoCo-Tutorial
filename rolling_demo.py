@@ -51,6 +51,9 @@ with viewer.launch_passive(m, d) as v:
     v.opt.frame = mujoco.mjtFrame.mjFRAME_CONTACT
     v.opt.label = mujoco.mjtLabel.mjLABEL_CONTACTFORCE  # label magnitudes
 
+    v.cam.distance = 5.0
+    v.cam.lookat = [0.0, 0.0, 0.0]
+
     # optional: small initial spin for richer contact behavior
     d.qvel[3:6] = np.array([0.0, 2.0, 0.0], dtype=np.float64)
 

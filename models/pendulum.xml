@@ -1,0 +1,65 @@
+<!-- MuJoCo model for a single-link pendulum controlled by a torque motor -->
+<mujoco model="simple-pendulum">
+    <!-- Global simulation settings: timestep (s), gravity vector, and integrator -->
+    <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
+
+    <!-- Viewer appearance defaults to make the scene readable -->
+    <visual>
+        <!-- Render actuators thick enough to see in the viewer overlay -->
+        <scale actuatorlength="0.4" actuatorwidth="0.2"/>
+        <!-- Add a subtle atmospheric haze so the pendulum stands out -->
+        <rgba haze="0.15 0.15 0.2 1"/>
+    </visual>
+
+    <!-- Default section defines reusable templates for geoms and joints -->
+    <default>
+        <!-- All geoms inherit this color and friction unless they override it -->
+        <geom rgba="0.3 0.6 0.9 1" friction="0.6 0.1 0.03"/>
+        <!-- Joints inherit range, damping, and stiffness; hinge will use this -->
+        <!-- Keep damping low and stiffness zero so the pendulum swings freely -->
+        <joint limited="true" range="-180 180" damping="0.002" stiffness="0"/>
+    </default>
+
+    <!-- Asset library: textures and materials referenced by geoms below -->
+    <asset>
+        <!-- Gradient skybox renders behind the scene -->
+        <texture name="sky" type="skybox" builtin="gradient" rgb1="0.2 0.3 0.45" rgb2="0.05 0.05 0.1" width="512" height="512"/>
+        <!-- Checker texture used for the ground plane -->
+        <texture name="floor" type="2d" builtin="checker" rgb1="0.2 0.2 0.2" rgb2="0.15 0.15 0.15" width="512" height="512"/>
+        <!-- Material binds the floor texture to the ground geom -->
+        <material name="floor_mat" texture="floor" reflectance="0.15"/>
+    </asset>
+
+    <!-- worldbody hosts the actual physical scene graph -->
+    <worldbody>
+        <!-- Overhead light that points toward the origin -->
+        <light pos="4 2 6" dir="-1 -1 -2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+        <!-- Infinite plane acting as a visual ground -->
+        <geom type="plane" size="2 2 0.1" material="floor_mat" rgba="0.8 0.8 0.8 1"/>
+
+        <!-- Fixed base body located slightly above the ground -->
+        <body name="base" pos="0 0 0.9">
+            <!-- Small sphere marks the hinge location visually -->
+            <geom name="base" type="sphere" size="0.04" rgba="0.25 0.25 0.25 1"/>
+
+            <!-- Child body carrying the pendulum link -->
+            <body name="link" pos="0 0 0">
+                <!-- Single rotational DOF about the y-axis -->
+                <joint name="hinge" type="hinge" axis="0 1 0"/>
+                <!-- Slender rod geometry modeled as a capsule from pivot to tip -->
+                <geom type="capsule" fromto="0 0 0 0.05 0 -0.5" size="0.035"/>
+                <!-- Offset a site at the tip for logging/visualization -->
+                <site name="tip" pos="0.05 0 -0.5" size="0.03" rgba="0.8 0.3 0.3 1"/>
+                <!-- Lumped mass/inertia properties for the link -->
+                <inertial pos="0 0 -0.25" mass="1" diaginertia="0.01 0.01 0.005"/>
+            </body>
+        </body>
+    </worldbody>
+
+    <!-- Actuator set: map controls to generalized forces -->
+    <actuator>
+        <!-- Motor applies torque at the hinge joint with +/-10 Nm range -->
+        <motor name="hinge_torque" joint="hinge" gear="1" ctrlrange="-10 10"/>
+    </actuator>
+</mujoco>
+
