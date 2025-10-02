@@ -49,6 +49,7 @@
                 <!-- Slender rod geometry modeled as a capsule from pivot to tip -->
                 <geom type="capsule" fromto="0 0 0 0.05 0 -0.5" size="0.035"/>
                 <!-- Offset a site at the tip for logging/visualization -->
+                <!-- Sites are named reference frames attached to bodies; on their own they store pose, not measurements. -->
                 <site name="tip" pos="0.05 0 -0.5" size="0.03" rgba="0.8 0.3 0.3 1"/>
                 <!-- Lumped mass/inertia properties for the link -->
                 <inertial pos="0 0 -0.25" mass="1" diaginertia="0.01 0.01 0.005"/>
@@ -61,5 +62,18 @@
         <!-- Motor applies torque at the hinge joint with +/-10 Nm range -->
         <motor name="hinge_torque" joint="hinge" gear="1" ctrlrange="-10 10"/>
     </actuator>
+
+    <!-- Sensors expose joint and site measurements to mujoco.MjData.sensordata -->
+    <sensor>
+        <!-- Joint-based sensors are convenient for controllers and logging -->
+        <jointpos name="hinge_angle" joint="hinge"/>
+        <jointvel name="hinge_velocity" joint="hinge"/>
+
+        <!-- Sensors request specific measurements each step. These frame sensors read pose/IMU values from the tip site. -->
+        <framepos name="tip_position" objtype="site" objname="tip"/>
+        <framequat name="tip_orientation" objtype="site" objname="tip"/>
+        <frameangvel name="tip_angular_velocity" objtype="site" objname="tip"/>
+        <accelerometer name="tip_linear_acceleration" site="tip"/>
+    </sensor>
 </mujoco>
 

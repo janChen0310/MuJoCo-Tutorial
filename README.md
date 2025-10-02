@@ -47,7 +47,7 @@ MuJoCo models are defined in MJCF XML or via the Python API. The simulator loads
 - `geom`: collision/visual geometry (spheres, capsules, meshes, heightfields)
 - `joint`: degrees of freedom (hinge, slide, ball, free)
 - `actuator`: maps controls to joint forces/torques
-- `sensor` & `site`: expose measurements and attachment frames
+- `sensor` & `site`: sites define named frames on bodies; sensors request MuJoCo to compute measurements (joint, site, body, etc.) each step
 - `asset`: shared resources like meshes, textures, heightfields
 
 ### Inspecting provided examples
@@ -106,6 +106,60 @@ Commonly used arrays on `mujoco.MjData`:
 - `d.xpos`: world coordinates of body frames
 - `d.cfrc_ext`: external/contact forces on each body
 - `d.sensordata`: all sensor readings (if sensors defined)
+
+Sensors are opt-in: declare them in MJCF and MuJoCo appends their readings into `d.sensordata`. Sites provide convenient reference frames for logging positions and velocities.
+
+### Sensor and Site Walkthrough
+
+The pendulum model now declares joint and frame sensors:
+
+```118:129:models/pendulum.xml
+    <sensor>
+        <jointpos name="hinge_angle" joint="hinge"/>
+        <jointvel name="hinge_velocity" joint="hinge"/>
+        <!-- `tip` is a site: a labeled frame fixed to the pendulum tip for kinematics/visualization. -->
+        <framepos name="tip_position" objtype="site" objname="tip"/>
+        <framequat name="tip_orientation" objtype="site" objname="tip"/>
+        <frameangvel name="tip_angular_velocity" objtype="site" objname="tip"/>
+        <accelerometer name="tip_linear_acceleration" site="tip"/>
+    </sensor>
+```
+
+A **site** (`<site name="tip" .../>` earlier in the XML) defines a coordinate frame anchored to a body; MuJoCo keeps its world pose up to date. The site alone does not generate data—it is a reference that other components (e.g. sensors, actuators, constraints) can attach to. A **sensor** block, on the other hand, asks MuJoCo to compute a specific measurement each step. Frame sensors such as `<framepos>` or `<frameacc>` take `objtype="site" objname="tip"` so the measurement is produced in the tip frame. That request causes the corresponding values to be written into contiguous regions of `data.sensordata` during simulation.
+
+At runtime each sensor occupies a slice inside `d.sensordata`. Use `model.sensor_adr` and `model.sensor_dim` to build a lookup table. The `sensor_readout_demo.py` script shows this pattern and prints both sensor values and the associated site state every few steps:
+
+```python
+python sensor_readout_demo.py --duration 3 --print-every 0.2
+```
+
+Inside the script:
+
+- it iterates over sensors to compute slices into `d.sensordata`
+- it queries the world-frame site pose (`d.site_xpos`) and velocities (`d.site_xvelp`, `d.site_xvelr`)
+- it reads the IMU-style quaternion, angular velocity, and linear acceleration sensors defined on the tip site
+- it overlays the data in the viewer for a live heads-up display
+
+In code, resolving sensor slices looks like:
+
+```72:94:sensor_readout_demo.py
+    sensor_map = _sensor_slices(model)
+    ...
+    for name, slc in sensor_map.items():
+        block = data.sensordata[slc]
+```
+
+While direct site state access uses the site id:
+
+```97:114:sensor_readout_demo.py
+    tip_id = site_ids["tip"]
+    position = data.site_xpos[tip_id]
+    mujoco.mj_objectVelocity(... tip_id ...)
+```
+
+Combining both gives you the raw IMU readings from the sensor block and the kinematic pose from the site arrays.
+
+Try running with `--no-render` to stream measurements to the console only, or change `--initial-angle` to alter the motion. This mirrors how larger projects log proprioceptive sensors while also inspecting high-level kinematics via sites.
 
 You can reset or perturb state directly:
 ```python
